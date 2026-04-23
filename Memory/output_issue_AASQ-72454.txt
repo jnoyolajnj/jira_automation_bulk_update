@@ -1,0 +1,794 @@
+{
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+    "id": "13983832",
+    "self": "https://jira.jnj.com/rest/api/2/issue/13983832",
+    "key": "AASQ-72454",
+    "fields": {
+        "customfield_12011": null,
+        "customfield_13100": null,
+        "customfield_12010": null,
+        "customfield_12013": null,
+        "customfield_13102": null,
+        "customfield_12012": null,
+        "customfield_13101": null,
+        "customfield_12015": null,
+        "resolution": null,
+        "customfield_12014": null,
+        "customfield_13103": null,
+        "customfield_17703": null,
+        "customfield_12017": null,
+        "customfield_17702": null,
+        "customfield_12016": null,
+        "customfield_17701": null,
+        "customfield_10500": null,
+        "customfield_12008": null,
+        "customfield_10501": null,
+        "customfield_12007": null,
+        "customfield_10502": null,
+        "customfield_10503": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/customFieldOption/10508",
+                "value": "GxP",
+                "id": "10508",
+                "disabled": false
+            }
+        ],
+        "customfield_12009": null,
+        "customfield_10504": null,
+        "customfield_10505": null,
+        "customfield_10506": null,
+        "lastViewed": "2026-04-21T21:46:07.428-0400",
+        "customfield_12000": null,
+        "customfield_14300": null,
+        "customfield_14301": null,
+        "customfield_12002": null,
+        "customfield_12001": null,
+        "customfield_12004": null,
+        "customfield_14304": null,
+        "customfield_12003": null,
+        "customfield_12006": null,
+        "customfield_14302": null,
+        "labels": [
+            "FIN",
+            "IE",
+            "Osprey",
+            "P1"
+        ],
+        "customfield_12005": {
+            "self": "https://jira.jnj.com/rest/api/2/customFieldOption/13609",
+            "value": "IT",
+            "id": "13609",
+            "disabled": false
+        },
+        "customfield_14303": null,
+        "customfield_13207": null,
+        "customfield_13206": null,
+        "customfield_13208": null,
+        "aggregatetimeoriginalestimate": null,
+        "issuelinks": [
+            {
+                "id": "18288089",
+                "self": "https://jira.jnj.com/rest/api/2/issueLink/18288089",
+                "inwardIssue": {
+                    "id": "5641499",
+                    "key": "AASQ-57282",
+                    "self": "https://jira.jnj.com/rest/api/2/issue/5641499",
+                    "fields": {
+                        "summary": "R42800 Sales Update Report",
+                        "status": {
+                            "self": "https://jira.jnj.com/rest/api/2/status/11701",
+                            "description": "",
+                            "iconUrl": "https://jira.jnj.com/images/icons/statuses/generic.png",
+                            "name": "Ready",
+                            "id": "11701",
+                            "statusCategory": {
+                                "self": "https://jira.jnj.com/rest/api/2/statuscategory/2",
+                                "id": 2,
+                                "key": "new",
+                                "colorName": "default",
+                                "name": "To Do"
+                            }
+                        },
+                        "priority": {
+                            "self": "https://jira.jnj.com/rest/api/2/priority/3",
+                            "iconUrl": "https://jira.jnj.com/images/icons/priorities/major.svg",
+                            "name": "High",
+                            "id": "3"
+                        },
+                        "issuetype": {
+                            "self": "https://jira.jnj.com/rest/api/2/issuetype/10201",
+                            "id": "10201",
+                            "description": "",
+                            "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=29911&avatarType=issuetype",
+                            "name": "Feature",
+                            "subtask": false,
+                            "avatarId": 29911
+                        }
+                    }
+                },
+                "type": {
+                    "id": "10300",
+                    "name": "Child-Issue",
+                    "inward": "is child task of",
+                    "outward": "is parent task of",
+                    "self": "https://jira.jnj.com/rest/api/2/issueLinkType/10300"
+                }
+            }
+        ],
+        "assignee": {
+            "self": "https://jira.jnj.com/rest/api/2/user?username=lhoch",
+            "name": "lhoch",
+            "key": "lhoch",
+            "emailAddress": "lhoch@ITS.JNJ.com",
+            "avatarUrls": {
+                "48x48": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=48",
+                "24x24": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=24",
+                "16x16": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=16",
+                "32x32": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=32"
+            },
+            "displayName": "Hoch, Lucas [MED] Non J&J",
+            "active": true,
+            "timeZone": "America/New_York"
+        },
+        "components": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/component/15125",
+                "id": "15125",
+                "name": "JDE",
+                "description": "Impacted system - RTE ref"
+            },
+            {
+                "self": "https://jira.jnj.com/rest/api/2/component/27331",
+                "id": "27331",
+                "name": "JDE_Config",
+                "description": "JDE Configuration"
+            }
+        ],
+        "customfield_13201": null,
+        "customfield_13203": null,
+        "customfield_13202": null,
+        "customfield_13205": null,
+        "customfield_13204": null,
+        "customfield_10600": null,
+        "subtasks": [
+            {
+                "id": "14108925",
+                "key": "AASQ-84787",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108925",
+                "fields": {
+                    "summary": "CR_Creation_&_Approval",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/10001",
+                        "description": "",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/generic.png",
+                        "name": "Completed",
+                        "id": "10001",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/3",
+                            "id": 3,
+                            "key": "done",
+                            "colorName": "success",
+                            "name": "Done"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108929",
+                "key": "AASQ-84789",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108929",
+                "fields": {
+                    "summary": "Config_doc_creation",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/10001",
+                        "description": "",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/generic.png",
+                        "name": "Completed",
+                        "id": "10001",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/3",
+                            "id": 3,
+                            "key": "done",
+                            "colorName": "success",
+                            "name": "Done"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108931",
+                "key": "AASQ-84790",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108931",
+                "fields": {
+                    "summary": "Test_Script_Creation ",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/3",
+                        "description": "This issue is being actively worked on at the moment by the assignee.",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/inprogress.png",
+                        "name": "In Progress",
+                        "id": "3",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/4",
+                            "id": 4,
+                            "key": "indeterminate",
+                            "colorName": "inprogress",
+                            "name": "In Progress"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108934",
+                "key": "AASQ-84792",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108934",
+                "fields": {
+                    "summary": "Data_Preparation ",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/10001",
+                        "description": "",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/generic.png",
+                        "name": "Completed",
+                        "id": "10001",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/3",
+                            "id": 3,
+                            "key": "done",
+                            "colorName": "success",
+                            "name": "Done"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108936",
+                "key": "AASQ-84794",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108936",
+                "fields": {
+                    "summary": "Test_in_PY_QTest ",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/10001",
+                        "description": "",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/generic.png",
+                        "name": "Completed",
+                        "id": "10001",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/3",
+                            "id": 3,
+                            "key": "done",
+                            "colorName": "success",
+                            "name": "Done"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108938",
+                "key": "AASQ-84796",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108938",
+                "fields": {
+                    "summary": "In_Sprint_Demo",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/1",
+                        "description": "The issue is open and ready for the assignee to start work on it.",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/open.png",
+                        "name": "Open",
+                        "id": "1",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/2",
+                            "id": 2,
+                            "key": "new",
+                            "colorName": "default",
+                            "name": "To Do"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108942",
+                "key": "AASQ-84798",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108942",
+                "fields": {
+                    "summary": "QA_Promoted",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/1",
+                        "description": "The issue is open and ready for the assignee to start work on it.",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/open.png",
+                        "name": "Open",
+                        "id": "1",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/2",
+                            "id": 2,
+                            "key": "new",
+                            "colorName": "default",
+                            "name": "To Do"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            },
+            {
+                "id": "14108943",
+                "key": "AASQ-84799",
+                "self": "https://jira.jnj.com/rest/api/2/issue/14108943",
+                "fields": {
+                    "summary": "Security_impact ",
+                    "status": {
+                        "self": "https://jira.jnj.com/rest/api/2/status/1",
+                        "description": "The issue is open and ready for the assignee to start work on it.",
+                        "iconUrl": "https://jira.jnj.com/images/icons/statuses/open.png",
+                        "name": "Open",
+                        "id": "1",
+                        "statusCategory": {
+                            "self": "https://jira.jnj.com/rest/api/2/statuscategory/2",
+                            "id": 2,
+                            "key": "new",
+                            "colorName": "default",
+                            "name": "To Do"
+                        }
+                    },
+                    "priority": {
+                        "self": "https://jira.jnj.com/rest/api/2/priority/4",
+                        "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+                        "name": "Medium",
+                        "id": "4"
+                    },
+                    "issuetype": {
+                        "self": "https://jira.jnj.com/rest/api/2/issuetype/5",
+                        "id": "5",
+                        "description": "The sub-task of the issue",
+                        "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+                        "name": "Sub-task",
+                        "subtask": true,
+                        "avatarId": 10316
+                    }
+                }
+            }
+        ],
+        "customfield_14400": null,
+        "reporter": {
+            "self": "https://jira.jnj.com/rest/api/2/user?username=DBalsam1",
+            "name": "DBalsam1",
+            "key": "JIRAUSER119291",
+            "emailAddress": "DBalsam1@ITS.JNJ.com",
+            "avatarUrls": {
+                "48x48": "https://jira.jnj.com/secure/useravatar?ownerId=JIRAUSER119291&avatarId=42838",
+                "24x24": "https://jira.jnj.com/secure/useravatar?size=small&ownerId=JIRAUSER119291&avatarId=42838",
+                "16x16": "https://jira.jnj.com/secure/useravatar?size=xsmall&ownerId=JIRAUSER119291&avatarId=42838",
+                "32x32": "https://jira.jnj.com/secure/useravatar?size=medium&ownerId=JIRAUSER119291&avatarId=42838"
+            },
+            "displayName": "Balsamello, Daiana [JACAT NON-J&J]",
+            "active": true,
+            "timeZone": "America/New_York"
+        },
+        "customfield_14403": null,
+        "customfield_16702": null,
+        "customfield_14401": null,
+        "customfield_16701": null,
+        "customfield_14402": null,
+        "customfield_16700": null,
+        "progress": {
+            "progress": 0,
+            "total": 0
+        },
+        "votes": {
+            "self": "https://jira.jnj.com/rest/api/2/issue/AASQ-72454/votes",
+            "votes": 0,
+            "hasVoted": false
+        },
+        "worklog": {
+            "startAt": 0,
+            "maxResults": 20,
+            "total": 0,
+            "worklogs": []
+        },
+        "archivedby": null,
+        "issuetype": {
+            "self": "https://jira.jnj.com/rest/api/2/issuetype/10001",
+            "id": "10001",
+            "description": "Created by Jira Software - do not edit or delete. Issue type for a user story.",
+            "iconUrl": "https://jira.jnj.com/secure/viewavatar?size=xsmall&avatarId=10315&avatarType=issuetype",
+            "name": "Story",
+            "subtask": false,
+            "avatarId": 10315
+        },
+        "project": {
+            "self": "https://jira.jnj.com/rest/api/2/project/13179",
+            "id": "13179",
+            "key": "AASQ",
+            "name": "Synthes",
+            "projectTypeKey": "software",
+            "avatarUrls": {
+                "48x48": "https://jira.jnj.com/secure/projectavatar?pid=13179&avatarId=10011",
+                "24x24": "https://jira.jnj.com/secure/projectavatar?size=small&pid=13179&avatarId=10011",
+                "16x16": "https://jira.jnj.com/secure/projectavatar?size=xsmall&pid=13179&avatarId=10011",
+                "32x32": "https://jira.jnj.com/secure/projectavatar?size=medium&pid=13179&avatarId=10011"
+            }
+        },
+        "customfield_10700": "https://jira.jnj.com/browse/AASQ-57282",
+        "customfield_10702": "50451671",
+        "customfield_10703": null,
+        "customfield_10704": null,
+        "resolutiondate": null,
+        "customfield_10705": null,
+        "customfield_10706": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/customFieldOption/21584",
+                "value": "EMEA_GMED_JDE8.12_JEDIKNIGHTS",
+                "id": "21584",
+                "disabled": false
+            }
+        ],
+        "customfield_10707": null,
+        "watches": {
+            "self": "https://jira.jnj.com/rest/api/2/issue/AASQ-72454/watchers",
+            "watchCount": 1,
+            "isWatching": false
+        },
+        "customfield_16000": null,
+        "customfield_12200": null,
+        "customfield_12202": null,
+        "customfield_12201": null,
+        "customfield_12204": null,
+        "customfield_14500": "",
+        "customfield_12203": null,
+        "customfield_11900": "4",
+        "updated": "2026-04-20T05:57:47.730-0400",
+        "timeoriginalestimate": null,
+        "description": "*Who:* Member of Order Processing team \r\n*What:* needs to be able to process SO, SA, CF, DF, KO\r\n*Why:* in order to have AR and GL records created and order moved to 625 status",
+        "customfield_11100": {
+            "self": "https://jira.jnj.com/rest/api/2/customFieldOption/11200",
+            "value": "Development",
+            "id": "11200",
+            "disabled": false
+        },
+        "customfield_13400": null,
+        "timetracking": {},
+        "customfield_12305": null,
+        "customfield_12304": null,
+        "customfield_10006": "AASQ-37583",
+        "customfield_12307": null,
+        "customfield_10800": "50449473",
+        "customfield_12306": null,
+        "customfield_10009": "1|ijfr38:",
+        "summary": "DPS-FI-Sales Update IE",
+        "customfield_10000": null,
+        "customfield_12301": null,
+        "customfield_10001": null,
+        "customfield_10002": 3.0,
+        "customfield_12300": null,
+        "customfield_10003": null,
+        "customfield_12303": null,
+        "customfield_12302": null,
+        "customfield_10004": [
+            "com.atlassian.greenhopper.service.sprint.Sprint@77514eba[activatedDate=2026-02-27T09:40:29.878-05:00,autoStartStop=false,completeDate=2026-03-30T07:55:50.764-04:00,endDate=2026-03-27T10:53:00.000-04:00,goal=,id=173124,incompleteIssuesDestinationId=<null>,name=Osprey Sprint 01,rapidViewId=49692,sequence=173124,startDate=2026-03-02T10:53:00.000-05:00,state=CLOSED,synced=false]",
+            "com.atlassian.greenhopper.service.sprint.Sprint@3f421ddb[activatedDate=2026-03-30T10:39:29.555-04:00,autoStartStop=false,completeDate=2026-04-20T05:57:32.052-04:00,endDate=2026-04-17T12:00:00.000-04:00,goal=,id=174464,incompleteIssuesDestinationId=<null>,name=Osprey Sprint 02,rapidViewId=49692,sequence=174464,startDate=2026-03-30T12:00:00.000-04:00,state=CLOSED,synced=false]",
+            "com.atlassian.greenhopper.service.sprint.Sprint@4cd2da19[activatedDate=2026-04-20T06:02:04.678-04:00,autoStartStop=false,completeDate=<null>,endDate=2026-05-08T23:01:00.000-04:00,goal=,id=175874,incompleteIssuesDestinationId=<null>,name=Osprey Sprint 03,rapidViewId=49692,sequence=175874,startDate=2026-04-20T04:01:00.000-04:00,state=ACTIVE,synced=false]"
+        ],
+        "environment": null,
+        "duedate": null,
+        "comment": {
+            "comments": [],
+            "maxResults": 1000,
+            "total": 0,
+            "startAt": 0
+        },
+        "fixVersions": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/version/186017",
+                "id": "186017",
+                "description": "Osprey Project",
+                "name": "Osprey_2026",
+                "archived": false,
+                "released": false,
+                "releaseDate": "2026-12-31"
+            }
+        ],
+        "customfield_11200": null,
+        "customfield_13500": [
+            {
+                "issueKey": "AASQ-72454",
+                "status": "UNCOVERED",
+                "statusStyle": "uncovered",
+                "ok": 0,
+                "okPercent": 0.0,
+                "okJql": "issueKey in ()",
+                "nok": 0,
+                "nokPercent": 0.0,
+                "nokJql": "issueKey in ()",
+                "notrun": 0,
+                "notrunPercent": 0.0,
+                "notRunJql": "issueKey in ()",
+                "unknown": 0,
+                "unknownPercent": 0.0,
+                "unknownJql": "issueKey in ()"
+            }
+        ],
+        "customfield_10104": null,
+        "customfield_10105": null,
+        "customfield_10106": null,
+        "customfield_10900": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/customFieldOption/10902",
+                "value": "EMEA",
+                "id": "10902",
+                "disabled": false
+            }
+        ],
+        "customfield_10901": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/customFieldOption/10907",
+                "value": "MedTech",
+                "id": "10907",
+                "disabled": false
+            }
+        ],
+        "customfield_10100": null,
+        "priority": {
+            "self": "https://jira.jnj.com/rest/api/2/priority/4",
+            "iconUrl": "https://jira.jnj.com/images/icons/priorities/minor.svg",
+            "name": "Medium",
+            "id": "4"
+        },
+        "customfield_14700": null,
+        "customfield_10101": null,
+        "customfield_10102": null,
+        "customfield_15902": null,
+        "timeestimate": null,
+        "versions": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/version/186017",
+                "id": "186017",
+                "description": "Osprey Project",
+                "name": "Osprey_2026",
+                "archived": false,
+                "released": false,
+                "releaseDate": "2026-12-31"
+            }
+        ],
+        "status": {
+            "self": "https://jira.jnj.com/rest/api/2/status/3",
+            "description": "This issue is being actively worked on at the moment by the assignee.",
+            "iconUrl": "https://jira.jnj.com/images/icons/statuses/inprogress.png",
+            "name": "In Progress",
+            "id": "3",
+            "statusCategory": {
+                "self": "https://jira.jnj.com/rest/api/2/statuscategory/4",
+                "id": 4,
+                "key": "indeterminate",
+                "colorName": "inprogress",
+                "name": "In Progress"
+            }
+        },
+        "customfield_12076": null,
+        "customfield_11300": null,
+        "archiveddate": null,
+        "aggregatetimeestimate": 0,
+        "customfield_12060": null,
+        "creator": {
+            "self": "https://jira.jnj.com/rest/api/2/user?username=DBalsam1",
+            "name": "DBalsam1",
+            "key": "JIRAUSER119291",
+            "emailAddress": "DBalsam1@ITS.JNJ.com",
+            "avatarUrls": {
+                "48x48": "https://jira.jnj.com/secure/useravatar?ownerId=JIRAUSER119291&avatarId=42838",
+                "24x24": "https://jira.jnj.com/secure/useravatar?size=small&ownerId=JIRAUSER119291&avatarId=42838",
+                "16x16": "https://jira.jnj.com/secure/useravatar?size=xsmall&ownerId=JIRAUSER119291&avatarId=42838",
+                "32x32": "https://jira.jnj.com/secure/useravatar?size=medium&ownerId=JIRAUSER119291&avatarId=42838"
+            },
+            "displayName": "Balsamello, Daiana [JACAT NON-J&J]",
+            "active": true,
+            "timeZone": "America/New_York"
+        },
+        "customfield_12062": null,
+        "customfield_12061": null,
+        "customfield_14000": null,
+        "customfield_12064": null,
+        "customfield_12063": null,
+        "customfield_12066": null,
+        "customfield_16303": null,
+        "customfield_12065": null,
+        "customfield_16302": null,
+        "customfield_12068": null,
+        "customfield_16301": null,
+        "customfield_12067": null,
+        "customfield_16300": null,
+        "aggregateprogress": {
+            "progress": 151200,
+            "total": 151200,
+            "percent": 100
+        },
+        "customfield_16307": null,
+        "customfield_12069": null,
+        "customfield_10200": null,
+        "customfield_16306": null,
+        "customfield_12501": null,
+        "customfield_16305": null,
+        "customfield_16304": null,
+        "customfield_12051": null,
+        "customfield_12050": null,
+        "customfield_12053": null,
+        "timespent": null,
+        "customfield_12052": null,
+        "customfield_12055": null,
+        "customfield_12054": null,
+        "customfield_12057": null,
+        "customfield_12056": null,
+        "customfield_12059": null,
+        "aggregatetimespent": 151200,
+        "customfield_12058": null,
+        "customfield_12601": null,
+        "customfield_12604": null,
+        "customfield_12603": null,
+        "workratio": -1,
+        "customfield_12040": null,
+        "customfield_12042": null,
+        "created": "2026-02-24T02:44:24.347-0500",
+        "customfield_12041": null,
+        "customfield_12044": null,
+        "customfield_16402": null,
+        "customfield_12043": null,
+        "customfield_16401": null,
+        "customfield_14100": "{summaryBean=com.atlassian.jira.plugin.devstatus.rest.SummaryBean@7cf82474[summary={pullrequest=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@2e93d27a[byInstanceType={},overall=PullRequestOverallBean{stateCount=0, state='OPEN', details=PullRequestOverallDetails{openCount=0, mergedCount=0, declinedCount=0}}], build=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@1da43b4[byInstanceType={},overall=com.atlassian.jira.plugin.devstatus.summary.beans.BuildOverallBean@316a41f7[failedBuildCount=0,successfulBuildCount=0,unknownBuildCount=0,count=0,lastUpdated=<null>,lastUpdatedTimestamp=<null>]], review=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@4fee170f[byInstanceType={},overall=com.atlassian.jira.plugin.devstatus.summary.beans.ReviewsOverallBean@13506fb2[dueDate=<null>,overDue=false,state=<null>,stateCount=0,count=0,lastUpdated=<null>,lastUpdatedTimestamp=<null>]], deployment-environment=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@4044498f[byInstanceType={},overall=com.atlassian.jira.plugin.devstatus.summary.beans.DeploymentOverallBean@23c2cd89[showProjects=false,successfulCount=0,topEnvironments=[],count=0,lastUpdated=<null>,lastUpdatedTimestamp=<null>]], repository=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@1cabf091[byInstanceType={},overall=com.atlassian.jira.plugin.devstatus.summary.beans.CommitOverallBean@c162149[count=0,lastUpdated=<null>,lastUpdatedTimestamp=<null>]], branch=com.atlassian.jira.plugin.devstatus.rest.SummaryItemBean@6efc0975[byInstanceType={},overall=com.atlassian.jira.plugin.devstatus.summary.beans.BranchOverallBean@5b672fa6[count=0,lastUpdated=<null>,lastUpdatedTimestamp=<null>]]},configErrors=[],errors=[]], devSummaryJson={\"cachedValue\":{\"errors\":[],\"configErrors\":[],\"summary\":{\"pullrequest\":{\"overall\":{\"count\":0,\"lastUpdated\":null,\"stateCount\":0,\"state\":\"OPEN\",\"details\":{\"openCount\":0,\"mergedCount\":0,\"declinedCount\":0,\"total\":0},\"open\":true},\"byInstanceType\":{}},\"build\":{\"overall\":{\"count\":0,\"lastUpdated\":null,\"failedBuildCount\":0,\"successfulBuildCount\":0,\"unknownBuildCount\":0},\"byInstanceType\":{}},\"review\":{\"overall\":{\"count\":0,\"lastUpdated\":null,\"stateCount\":0,\"state\":null,\"dueDate\":null,\"overDue\":false,\"completed\":false},\"byInstanceType\":{}},\"deployment-environment\":{\"overall\":{\"count\":0,\"lastUpdated\":null,\"topEnvironments\":[],\"showProjects\":false,\"successfulCount\":0},\"byInstanceType\":{}},\"repository\":{\"overall\":{\"count\":0,\"lastUpdated\":null},\"byInstanceType\":{}},\"branch\":{\"overall\":{\"count\":0,\"lastUpdated\":null},\"byInstanceType\":{}}}},\"isStale\":false}}",
+        "customfield_16400": null,
+        "customfield_12048": null,
+        "customfield_12600": null,
+        "customfield_10300": "*Given*  that there's a new GO Company from that must sell DePuy products\r\n*When*  a Sales Order is created, shipped and invoiced\r\n*Then*  DePuy products are sales updated\r\n\r\n ",
+        "customfield_12049": null,
+        "customfield_13800": null,
+        "customfield_12031": null,
+        "customfield_12030": null,
+        "customfield_12033": null,
+        "customfield_12032": null,
+        "customfield_12035": null,
+        "customfield_12034": null,
+        "customfield_12037": null,
+        "customfield_12036": null,
+        "customfield_10401": null,
+        "customfield_10402": null,
+        "customfield_12029": null,
+        "attachment": [
+            {
+                "self": "https://jira.jnj.com/rest/api/2/attachment/6738258",
+                "id": "6738258",
+                "filename": "AASQ-72454_Config Doc_SOP - SU IE.xlsx",
+                "author": {
+                    "self": "https://jira.jnj.com/rest/api/2/user?username=lhoch",
+                    "name": "lhoch",
+                    "key": "lhoch",
+                    "emailAddress": "lhoch@ITS.JNJ.com",
+                    "avatarUrls": {
+                        "48x48": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=48",
+                        "24x24": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=24",
+                        "16x16": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=16",
+                        "32x32": "https://www.gravatar.com/avatar/d74e0b3bb08f4bafc76bc3c1796df16c?d=mm&s=32"
+                    },
+                    "displayName": "Hoch, Lucas [MED] Non J&J",
+                    "active": true,
+                    "timeZone": "America/New_York"
+                },
+                "created": "2026-04-08T09:10:42.857-0400",
+                "size": 46731,
+                "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "content": "https://jira.jnj.com/secure/attachment/6738258/AASQ-72454_Config+Doc_SOP+-+SU+IE.xlsx"
+            }
+        ],
+        "customfield_12020": null,
+        "customfield_12022": null,
+        "customfield_16500": null,
+        "customfield_12024": null,
+        "customfield_12023": null,
+        "customfield_12026": null,
+        "customfield_12025": null,
+        "customfield_12028": null,
+        "customfield_10400": null,
+        "customfield_12027": null,
+        "customfield_12019": null,
+        "customfield_12018": null,
+        "customfield_11600": null
+    },
+    "renderedFields": null
+}
