@@ -1,0 +1,50 @@
+{
+    "jira": {
+        "base_url": "https://jira.jnj.com",
+        "verify_ssl": true,
+        "timeout_seconds": 30
+    },
+    "smtp": {
+        "host": "smtp.example.com",
+        "port": 587,
+        "use_tls": true,
+        "username": "",
+        "password": "",
+        "from_address": "noreply@its.jnj.com"
+    },
+    "field_ids": {
+        "acceptance_criteria": "customfield_10300",
+        "compliance_type": "customfield_10503",
+        "epic_link": "customfield_10006",
+        "team_name": "customfield_10706",
+        "requirement_id": "customfield_10702",
+        "region": "customfield_10900",
+        "sector": "customfield_10901"
+    },
+    "expected_values": {
+        "affects_version": "Osprey_2026",
+        "fix_version": "Osprey_2026",
+        "component": "JDE",
+        "base_label": "Osprey",
+        "compliance_type": "GxP",
+        "team_name": "EMEA_GMED_JDE8.12_JEDIKNIGHTS",
+        "region": "EMEA",
+        "sector": "MedTech"
+    },
+    "teams": {
+        "Finance": {
+            "label": "FIN",
+            "leader_email": "leader.finance@its.jnj.com"
+        },
+        "Delivery": {
+            "label": "DEL",
+            "leader_email": "leader.delivery@its.jnj.com"
+        },
+        "Loaner": {
+            "label": "LOA",
+            "leader_email": "leader.loaner@its.jnj.com"
+        }
+    },
+    "acceptance_criteria_keywords": ["Given", "When", "Then"],
+    "description_keywords": ["Who", "What", "Why"]
+}
