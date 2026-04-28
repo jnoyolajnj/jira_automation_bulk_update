@@ -53,6 +53,8 @@ class StepResult:
     message: str = ""
     action: str = ""  # "updated", "emailed", "skipped", "none"
     error: str = ""
+    expected: str = ""
+    actual: str = ""
 
 
 @dataclass
@@ -156,13 +158,27 @@ def _list_values(items: list[dict] | None, key: str = "name") -> list[str]:
     return [i.get(key, "") for i in items]
 
 
+def _option_value(v: Any) -> str:
+    """Render a Jira field value (option dict, list of options, scalar) for the report."""
+    if v is None:
+        return "<empty>"
+    if isinstance(v, list):
+        if not v:
+            return "<empty>"
+        return ", ".join(_option_value(x) for x in v)
+    if isinstance(v, dict):
+        return str(v.get("value") or v.get("name") or v)
+    return str(v)
+
+
 def check_contains_named(item_list: list[dict] | None, expected_name: str) -> bool:
     return expected_name in _list_values(item_list or [], "name")
 
 
 class IssueProcessor:
     def __init__(self, jira: JiraClient, mailer: Mailer, config: dict[str, Any],
-                 auto_update: bool = True, send_emails: bool = True):
+                 auto_update: bool = True, send_emails: bool = True,
+                 raw_response_dir: Path | None = None):
         self.jira = jira
         self.mailer = mailer
         self.cfg = config
@@ -171,6 +187,9 @@ class IssueProcessor:
         self.field_ids = config["field_ids"]
         self.expected = config["expected_values"]
         self.teams = config["teams"]
+        self.raw_response_dir = raw_response_dir
+        if raw_response_dir is not None:
+            raw_response_dir.mkdir(parents=True, exist_ok=True)
 
     # --- helpers -----------------------------------------------------------
 
@@ -206,9 +225,12 @@ class IssueProcessor:
     def check_affects_version(self, key: str, fields: dict) -> StepResult:
         expected = self.expected["affects_version"]
         current = _list_values(fields.get("versions"), "name")
+        actual = ", ".join(current) if current else "<empty>"
         if expected in current:
-            return StepResult("Affects version", True, f"Contains '{expected}'")
-        res = StepResult("Affects version", False, f"Missing '{expected}' (current={current})")
+            return StepResult("Affects version", True, f"Contains '{expected}'",
+                              expected=expected, actual=actual)
+        res = StepResult("Affects version", False, f"Missing '{expected}'",
+                         expected=expected, actual=actual)
         new_versions = [{"name": v} for v in current] + [{"name": expected}]
         self._update(key, {"versions": new_versions}, res)
         return res
@@ -216,9 +238,12 @@ class IssueProcessor:
     def check_fix_version(self, key: str, fields: dict) -> StepResult:
         expected = self.expected["fix_version"]
         current = _list_values(fields.get("fixVersions"), "name")
+        actual = ", ".join(current) if current else "<empty>"
         if expected in current:
-            return StepResult("Fix version", True, f"Contains '{expected}'")
-        res = StepResult("Fix version", False, f"Missing '{expected}' (current={current})")
+            return StepResult("Fix version", True, f"Contains '{expected}'",
+                              expected=expected, actual=actual)
+        res = StepResult("Fix version", False, f"Missing '{expected}'",
+                         expected=expected, actual=actual)
         new_versions = [{"name": v} for v in current] + [{"name": expected}]
         self._update(key, {"fixVersions": new_versions}, res)
         return res
@@ -226,9 +251,12 @@ class IssueProcessor:
     def check_component(self, key: str, fields: dict) -> StepResult:
         expected = self.expected["component"]
         current = _list_values(fields.get("components"), "name")
+        actual = ", ".join(current) if current else "<empty>"
         if expected in current:
-            return StepResult("Component", True, f"Contains '{expected}'")
-        res = StepResult("Component", False, f"Missing '{expected}' (current={current})")
+            return StepResult("Component", True, f"Contains '{expected}'",
+                              expected=expected, actual=actual)
+        res = StepResult("Component", False, f"Missing '{expected}'",
+                        expected=expected, actual=actual)
         new_components = [{"name": c} for c in current] + [{"name": expected}]
         self._update(key, {"components": new_components}, res)
         return res
@@ -245,10 +273,16 @@ class IssueProcessor:
         if team_label and team_label not in current_labels:
             missing.append(team_label)
 
-        if not missing:
-            return StepResult("Labels", True, f"Has {base_label}" + (f" + {team_label}" if team_label else ""))
+        expected_str = base_label + (f", {team_label}" if team_label else "")
+        actual = ", ".join(current_labels) if current_labels else "<empty>"
 
-        res = StepResult("Labels", False, f"Missing labels: {missing}")
+        if not missing:
+            return StepResult("Labels", True,
+                              f"Has {base_label}" + (f" + {team_label}" if team_label else ""),
+                              expected=expected_str, actual=actual)
+
+        res = StepResult("Labels", False, f"Missing labels: {missing}",
+                         expected=expected_str, actual=actual)
         new_labels = current_labels + missing
         self._update(key, {"labels": new_labels}, res)
         return res
@@ -258,10 +292,14 @@ class IssueProcessor:
         body = fields.get(field_id) or ""
         keywords = self.cfg["acceptance_criteria_keywords"]
         missing = [kw for kw in keywords if not re.search(rf"\b{re.escape(kw)}\b", body, re.IGNORECASE)]
+        expected_str = f"Body containing {keywords}"
+        actual = body.strip() if body.strip() else "<empty>"
         if body.strip() and not missing:
-            return StepResult("Acceptance Criteria", True, f"Contains {keywords}")
+            return StepResult("Acceptance Criteria", True, f"Contains {keywords}",
+                              expected=expected_str, actual=actual)
         msg = "Empty" if not body.strip() else f"Missing parts: {missing}"
-        res = StepResult("Acceptance Criteria", False, msg)
+        res = StepResult("Acceptance Criteria", False, msg,
+                         expected=expected_str, actual=actual)
         self._email_leader(
             team,
             subject=f"[Jira Check] {key} - Acceptance Criteria incomplete",
@@ -273,18 +311,26 @@ class IssueProcessor:
     def check_compliance_type(self, key: str, fields: dict) -> StepResult:
         field_id = self.field_ids["compliance_type"]
         v = fields.get(field_id)
+        expected = self.expected["compliance_type"]
+        actual = _option_value(v)
         if _has_value(v):
-            return StepResult("Compliance type", True, "Filled")
-        res = StepResult("Compliance type", False, "Empty")
-        self._update(key, {field_id: [{"value": self.expected["compliance_type"]}]}, res)
+            return StepResult("Compliance type", True, "Filled",
+                              expected=expected, actual=actual)
+        res = StepResult("Compliance type", False, "Empty",
+                         expected=expected, actual=actual)
+        self._update(key, {field_id: [{"value": expected}]}, res)
         return res
 
     def check_epic_link(self, key: str, fields: dict, team: str) -> StepResult:
         field_id = self.field_ids["epic_link"]
         v = fields.get(field_id)
+        expected = "<non-empty Epic key>"
+        actual = str(v) if _has_value(v) else "<empty>"
         if _has_value(v):
-            return StepResult("Epic Link", True, f"Filled={v}")
-        res = StepResult("Epic Link", False, "Empty or missing")
+            return StepResult("Epic Link", True, f"Filled={v}",
+                              expected=expected, actual=actual)
+        res = StepResult("Epic Link", False, "Empty or missing",
+                         expected=expected, actual=actual)
         self._email_leader(
             team,
             subject=f"[Jira Check] {key} - Epic Link missing",
@@ -296,18 +342,26 @@ class IssueProcessor:
     def check_team_name(self, key: str, fields: dict) -> StepResult:
         field_id = self.field_ids["team_name"]
         v = fields.get(field_id)
+        expected = self.expected["team_name"]
+        actual = _option_value(v)
         if _has_value(v):
-            return StepResult("Team Name", True, "Filled")
-        res = StepResult("Team Name", False, "Empty")
-        self._update(key, {field_id: [{"value": self.expected["team_name"]}]}, res)
+            return StepResult("Team Name", True, "Filled",
+                              expected=expected, actual=actual)
+        res = StepResult("Team Name", False, "Empty",
+                         expected=expected, actual=actual)
+        self._update(key, {field_id: [{"value": expected}]}, res)
         return res
 
     def check_requirement_id(self, key: str, fields: dict, team: str) -> StepResult:
         field_id = self.field_ids["requirement_id"]
         v = fields.get(field_id)
+        expected = "<non-empty Requirement ID>"
+        actual = str(v) if _has_value(v) else "<empty>"
         if _has_value(v):
-            return StepResult("Requirement ID", True, f"Filled={v}")
-        res = StepResult("Requirement ID", False, "Empty or missing")
+            return StepResult("Requirement ID", True, f"Filled={v}",
+                              expected=expected, actual=actual)
+        res = StepResult("Requirement ID", False, "Empty or missing",
+                         expected=expected, actual=actual)
         self._email_leader(
             team,
             subject=f"[Jira Check] {key} - Requirement ID missing",
@@ -319,29 +373,41 @@ class IssueProcessor:
     def check_region(self, key: str, fields: dict) -> StepResult:
         field_id = self.field_ids["region"]
         v = fields.get(field_id)
+        expected = self.expected["region"]
+        actual = _option_value(v)
         if _has_value(v):
-            return StepResult("Region", True, "Filled")
-        res = StepResult("Region", False, "Empty")
-        self._update(key, {field_id: [{"value": self.expected["region"]}]}, res)
+            return StepResult("Region", True, "Filled",
+                              expected=expected, actual=actual)
+        res = StepResult("Region", False, "Empty",
+                         expected=expected, actual=actual)
+        self._update(key, {field_id: [{"value": expected}]}, res)
         return res
 
     def check_sector(self, key: str, fields: dict) -> StepResult:
         field_id = self.field_ids["sector"]
         v = fields.get(field_id)
+        expected = self.expected["sector"]
+        actual = _option_value(v)
         if _has_value(v):
-            return StepResult("Sector", True, "Filled")
-        res = StepResult("Sector", False, "Empty")
-        self._update(key, {field_id: [{"value": self.expected["sector"]}]}, res)
+            return StepResult("Sector", True, "Filled",
+                              expected=expected, actual=actual)
+        res = StepResult("Sector", False, "Empty",
+                         expected=expected, actual=actual)
+        self._update(key, {field_id: [{"value": expected}]}, res)
         return res
 
     def check_description(self, key: str, fields: dict, team: str) -> StepResult:
         body = fields.get("description") or ""
         keywords = self.cfg["description_keywords"]
         missing = [kw for kw in keywords if not re.search(rf"\b{re.escape(kw)}\b", body, re.IGNORECASE)]
+        expected_str = f"Body containing {keywords}"
+        actual = body.strip() if body.strip() else "<empty>"
         if body.strip() and not missing:
-            return StepResult("Description", True, f"Contains {keywords}")
+            return StepResult("Description", True, f"Contains {keywords}",
+                              expected=expected_str, actual=actual)
         msg = "Empty" if not body.strip() else f"Missing parts: {missing}"
-        res = StepResult("Description", False, msg)
+        res = StepResult("Description", False, msg,
+                         expected=expected_str, actual=actual)
         self._email_leader(
             team,
             subject=f"[Jira Check] {key} - Description incomplete",
@@ -367,8 +433,15 @@ class IssueProcessor:
             if link_type.lower() == "is child task of" and link.get("inwardIssue"):
                 child_of_keys.append(link["inwardIssue"]["key"])
 
+        expected_str = (
+            f"'is child task of' target == RequirementID/Parent "
+            f"({req_id or parent_key_from_url or '<unknown>'})"
+        )
+        actual = ", ".join(child_of_keys) if child_of_keys else "<no child-of link>"
+
         if not child_of_keys:
-            res = StepResult("Issue Links", False, "No 'is child task of' link found")
+            res = StepResult("Issue Links", False, "No 'is child task of' link found",
+                             expected=expected_str, actual=actual)
             self._email_leader(
                 team,
                 subject=f"[Jira Check] {key} - Missing child-of link",
@@ -384,13 +457,16 @@ class IssueProcessor:
         matched = any(ck in candidates for ck in child_of_keys) if candidates else False
 
         if matched:
-            return StepResult("Issue Links", True, f"Child-of {child_of_keys} matches requirement")
+            return StepResult("Issue Links", True,
+                              f"Child-of {child_of_keys} matches requirement",
+                              expected=expected_str, actual=actual)
 
         msg = (
             f"Child-of={child_of_keys}, RequirementID={req_id!r}, "
             f"ParentKeyFromURL={parent_key_from_url!r}"
         )
-        res = StepResult("Issue Links", False, f"Discrepancy: {msg}")
+        res = StepResult("Issue Links", False, f"Discrepancy: {msg}",
+                         expected=expected_str, actual=actual)
         self._email_leader(
             team,
             subject=f"[Jira Check] {key} - Issue Link / Requirement ID discrepancy",
@@ -412,6 +488,14 @@ class IssueProcessor:
             result.overall = "FAIL"
             result.duration_seconds = round(time.perf_counter() - started, 3)
             return result
+
+        if self.raw_response_dir is not None:
+            try:
+                out_path = self.raw_response_dir / f"{issue_key}.json"
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(issue, f, indent=2, ensure_ascii=False)
+            except Exception as e:  # noqa: BLE001
+                log.warning("Failed to save raw response for %s: %s", issue_key, e)
 
         fields = issue.get("fields", {})
 
@@ -488,16 +572,17 @@ def write_report(results: list[IssueResult], output_path: Path) -> None:
 
     details = wb.create_sheet("Details")
     details.append([
-        "Issue Key", "Team", "Step", "Passed", "Message", "Action", "Error",
+        "Issue Key", "Team", "Step", "Passed", "Expected Value", "Actual Value",
+        "Message", "Action", "Error",
     ])
     for r in results:
         if r.runtime_error and not r.steps:
-            details.append([r.issue_key, r.team, "-", False, "-", "-", r.runtime_error])
+            details.append([r.issue_key, r.team, "-", "FAIL", "-", "-", "-", "-", r.runtime_error])
             continue
         for s in r.steps:
             details.append([
                 r.issue_key, r.team, s.name, "PASS" if s.passed else "FAIL",
-                s.message, s.action, s.error,
+                s.expected, s.actual, s.message, s.action, s.error,
             ])
 
     wb.save(output_path)
@@ -542,7 +627,16 @@ def main(argv: list[str] | None = None) -> int:
         timeout=config["jira"].get("timeout_seconds", 30),
     )
     mailer = Mailer(config["smtp"], dry_run=not send_emails)
-    processor = IssueProcessor(jira, mailer, config, auto_update=auto_update, send_emails=send_emails)
+
+    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    reports_dir = Path("reports")
+    reports_dir.mkdir(exist_ok=True)
+    raw_dir = reports_dir / f"raw_{run_ts}"
+    processor = IssueProcessor(
+        jira, mailer, config,
+        auto_update=auto_update, send_emails=send_emails,
+        raw_response_dir=raw_dir,
+    )
 
     stories = read_input(input_path)
     log.info("Processing %d user stories", len(stories))
@@ -561,11 +655,15 @@ def main(argv: list[str] | None = None) -> int:
                  res.overall, res.duration_seconds, res.failing_step_names())
         results.append(res)
 
-    out = Path(args.output) if args.output else Path(
-        f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    )
+    if args.output:
+        out = Path(args.output)
+    else:
+        out = reports_dir / f"report_{run_ts}.xlsx"
+    out.parent.mkdir(parents=True, exist_ok=True)
     write_report(results, out)
     log.info("Report written: %s", out)
+    if raw_dir.exists():
+        log.info("Raw API responses: %s", raw_dir)
 
     fails = sum(1 for r in results if r.overall != "PASS")
     log.info("Done. %d PASS, %d FAIL", len(results) - fails, fails)
