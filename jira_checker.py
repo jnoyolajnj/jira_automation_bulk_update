@@ -214,23 +214,19 @@ class IssueProcessor:
 
         empty    -> FAIL + auto-fill with expected
         equal    -> PASS
-        mismatch -> FAIL (no overwrite — value may be intentional, requires review)
+        mismatch -> FAIL + auto-overwrite with expected
         """
         v = fields.get(field_id)
         actual = _option_value(v)
-        if not _has_value(v):
-            res = StepResult(step_name, False, "Empty",
-                             expected=expected, actual=actual)
-            self._update(key, {field_id: [{"value": expected}]}, res)
-            return res
         if actual == expected:
             return StepResult(step_name, True, "Matches expected",
                               expected=expected, actual=actual)
-        return StepResult(
-            step_name, False,
-            f"Value mismatch: expected '{expected}', got '{actual}'",
-            expected=expected, actual=actual,
+        msg = "Empty" if not _has_value(v) else (
+            f"Value mismatch: expected '{expected}', got '{actual}'"
         )
+        res = StepResult(step_name, False, msg, expected=expected, actual=actual)
+        self._update(key, {field_id: [{"value": expected}]}, res)
+        return res
 
     # --- check methods ------------------------------------------------------
 
@@ -758,14 +754,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     mailer = Mailer(config["smtp"], dry_run=not send_emails)
 
-    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     reports_dir = Path("reports")
-    reports_dir.mkdir(exist_ok=True)
-    raw_dir = reports_dir / f"raw_{run_ts}"
+    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = reports_dir / f"run_{run_ts}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log.info("Run folder: %s", run_dir)
     processor = IssueProcessor(
         jira, mailer, config,
         auto_update=auto_update, send_emails=send_emails,
-        raw_response_dir=raw_dir,
+        raw_response_dir=run_dir,
     )
 
     stories = read_input(input_path)
@@ -796,12 +793,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.output:
         out = Path(args.output)
     else:
-        out = reports_dir / f"report_{run_ts}.xlsx"
+        out = run_dir / "report.xlsx"
     out.parent.mkdir(parents=True, exist_ok=True)
     write_report(results, out)
     log.info("Report written: %s", out)
-    if raw_dir.exists():
-        log.info("Raw API responses: %s", raw_dir)
+    log.info("Raw API responses saved alongside report in: %s", run_dir)
 
     fails = sum(1 for r in results if r.overall != "PASS")
     log.info("Done. %d PASS, %d FAIL", len(results) - fails, fails)
