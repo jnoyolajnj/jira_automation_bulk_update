@@ -118,15 +118,19 @@ class Mailer:
         self.cfg = smtp_cfg
         self.dry_run = dry_run
 
-    def send(self, to_address: str, subject: str, body: str) -> None:
+    def send(self, to_address: str, subject: str, body: str,
+             html_body: str | None = None) -> None:
         if self.dry_run or not to_address:
-            log.info("[DRY-RUN email] to=%s subject=%s", to_address, subject)
+            log.info("[DRY-RUN email] to=%s subject=%s html=%s",
+                     to_address, subject, bool(html_body))
             return
         msg = EmailMessage()
         msg["From"] = self.cfg["from_address"]
         msg["To"] = to_address
         msg["Subject"] = subject
         msg.set_content(body)
+        if html_body:
+            msg.add_alternative(html_body, subtype="html")
 
         with smtplib.SMTP(self.cfg["host"], self.cfg["port"]) as s:
             if self.cfg.get("use_tls"):
@@ -193,22 +197,6 @@ class IssueProcessor:
 
     # --- helpers -----------------------------------------------------------
 
-    def _email_leader(self, team: str, subject: str, body: str, result: StepResult) -> None:
-        team_info = self.teams.get(team)
-        if not team_info or not team_info.get("leader_email"):
-            result.action = "email-skipped"
-            result.error = f"No leader email configured for team '{team}'"
-            return
-        if not self.send_emails:
-            result.action = "email-skipped (disabled)"
-            return
-        try:
-            self.mailer.send(team_info["leader_email"], subject, body)
-            result.action = f"emailed:{team_info['leader_email']}"
-        except Exception as e:  # noqa: BLE001
-            result.action = "email-failed"
-            result.error = str(e)
-
     def _update(self, key: str, fields: dict[str, Any], result: StepResult) -> None:
         if not self.auto_update:
             result.action = "update-skipped (disabled)"
@@ -219,6 +207,30 @@ class IssueProcessor:
         except Exception as e:  # noqa: BLE001
             result.action = "update-failed"
             result.error = str(e)
+
+    def _check_single_option_field(self, key: str, fields: dict, step_name: str,
+                                   field_id: str, expected: str) -> StepResult:
+        """Strict-equality check for single-value option fields.
+
+        empty    -> FAIL + auto-fill with expected
+        equal    -> PASS
+        mismatch -> FAIL (no overwrite — value may be intentional, requires review)
+        """
+        v = fields.get(field_id)
+        actual = _option_value(v)
+        if not _has_value(v):
+            res = StepResult(step_name, False, "Empty",
+                             expected=expected, actual=actual)
+            self._update(key, {field_id: [{"value": expected}]}, res)
+            return res
+        if actual == expected:
+            return StepResult(step_name, True, "Matches expected",
+                              expected=expected, actual=actual)
+        return StepResult(
+            step_name, False,
+            f"Value mismatch: expected '{expected}', got '{actual}'",
+            expected=expected, actual=actual,
+        )
 
     # --- check methods ------------------------------------------------------
 
@@ -287,7 +299,7 @@ class IssueProcessor:
         self._update(key, {"labels": new_labels}, res)
         return res
 
-    def check_acceptance_criteria(self, key: str, fields: dict, team: str) -> StepResult:
+    def check_acceptance_criteria(self, fields: dict) -> StepResult:
         field_id = self.field_ids["acceptance_criteria"]
         body = fields.get(field_id) or ""
         keywords = self.cfg["acceptance_criteria_keywords"]
@@ -298,30 +310,17 @@ class IssueProcessor:
             return StepResult("Acceptance Criteria", True, f"Contains {keywords}",
                               expected=expected_str, actual=actual)
         msg = "Empty" if not body.strip() else f"Missing parts: {missing}"
-        res = StepResult("Acceptance Criteria", False, msg,
-                         expected=expected_str, actual=actual)
-        self._email_leader(
-            team,
-            subject=f"[Jira Check] {key} - Acceptance Criteria incomplete",
-            body=f"User Story {key} has an incomplete Acceptance Criteria.\n{msg}\n",
-            result=res,
-        )
-        return res
+        return StepResult("Acceptance Criteria", False, msg,
+                          expected=expected_str, actual=actual)
 
     def check_compliance_type(self, key: str, fields: dict) -> StepResult:
-        field_id = self.field_ids["compliance_type"]
-        v = fields.get(field_id)
-        expected = self.expected["compliance_type"]
-        actual = _option_value(v)
-        if _has_value(v):
-            return StepResult("Compliance type", True, "Filled",
-                              expected=expected, actual=actual)
-        res = StepResult("Compliance type", False, "Empty",
-                         expected=expected, actual=actual)
-        self._update(key, {field_id: [{"value": expected}]}, res)
-        return res
+        return self._check_single_option_field(
+            key, fields, "Compliance type",
+            self.field_ids["compliance_type"],
+            self.expected["compliance_type"],
+        )
 
-    def check_epic_link(self, key: str, fields: dict, team: str) -> StepResult:
+    def check_epic_link(self, fields: dict) -> StepResult:
         field_id = self.field_ids["epic_link"]
         v = fields.get(field_id)
         expected = "<non-empty Epic key>"
@@ -329,30 +328,17 @@ class IssueProcessor:
         if _has_value(v):
             return StepResult("Epic Link", True, f"Filled={v}",
                               expected=expected, actual=actual)
-        res = StepResult("Epic Link", False, "Empty or missing",
-                         expected=expected, actual=actual)
-        self._email_leader(
-            team,
-            subject=f"[Jira Check] {key} - Epic Link missing",
-            body=f"User Story {key} has no Epic Link. Please review.\n",
-            result=res,
-        )
-        return res
+        return StepResult("Epic Link", False, "Empty or missing",
+                          expected=expected, actual=actual)
 
     def check_team_name(self, key: str, fields: dict) -> StepResult:
-        field_id = self.field_ids["team_name"]
-        v = fields.get(field_id)
-        expected = self.expected["team_name"]
-        actual = _option_value(v)
-        if _has_value(v):
-            return StepResult("Team Name", True, "Filled",
-                              expected=expected, actual=actual)
-        res = StepResult("Team Name", False, "Empty",
-                         expected=expected, actual=actual)
-        self._update(key, {field_id: [{"value": expected}]}, res)
-        return res
+        return self._check_single_option_field(
+            key, fields, "Team Name",
+            self.field_ids["team_name"],
+            self.expected["team_name"],
+        )
 
-    def check_requirement_id(self, key: str, fields: dict, team: str) -> StepResult:
+    def check_requirement_id(self, fields: dict) -> StepResult:
         field_id = self.field_ids["requirement_id"]
         v = fields.get(field_id)
         expected = "<non-empty Requirement ID>"
@@ -360,43 +346,24 @@ class IssueProcessor:
         if _has_value(v):
             return StepResult("Requirement ID", True, f"Filled={v}",
                               expected=expected, actual=actual)
-        res = StepResult("Requirement ID", False, "Empty or missing",
-                         expected=expected, actual=actual)
-        self._email_leader(
-            team,
-            subject=f"[Jira Check] {key} - Requirement ID missing",
-            body=f"User Story {key} has no Requirement ID. Please review.\n",
-            result=res,
-        )
-        return res
+        return StepResult("Requirement ID", False, "Empty or missing",
+                          expected=expected, actual=actual)
 
     def check_region(self, key: str, fields: dict) -> StepResult:
-        field_id = self.field_ids["region"]
-        v = fields.get(field_id)
-        expected = self.expected["region"]
-        actual = _option_value(v)
-        if _has_value(v):
-            return StepResult("Region", True, "Filled",
-                              expected=expected, actual=actual)
-        res = StepResult("Region", False, "Empty",
-                         expected=expected, actual=actual)
-        self._update(key, {field_id: [{"value": expected}]}, res)
-        return res
+        return self._check_single_option_field(
+            key, fields, "Region",
+            self.field_ids["region"],
+            self.expected["region"],
+        )
 
     def check_sector(self, key: str, fields: dict) -> StepResult:
-        field_id = self.field_ids["sector"]
-        v = fields.get(field_id)
-        expected = self.expected["sector"]
-        actual = _option_value(v)
-        if _has_value(v):
-            return StepResult("Sector", True, "Filled",
-                              expected=expected, actual=actual)
-        res = StepResult("Sector", False, "Empty",
-                         expected=expected, actual=actual)
-        self._update(key, {field_id: [{"value": expected}]}, res)
-        return res
+        return self._check_single_option_field(
+            key, fields, "Sector",
+            self.field_ids["sector"],
+            self.expected["sector"],
+        )
 
-    def check_description(self, key: str, fields: dict, team: str) -> StepResult:
+    def check_description(self, fields: dict) -> StepResult:
         body = fields.get("description") or ""
         keywords = self.cfg["description_keywords"]
         missing = [kw for kw in keywords if not re.search(rf"\b{re.escape(kw)}\b", body, re.IGNORECASE)]
@@ -406,17 +373,10 @@ class IssueProcessor:
             return StepResult("Description", True, f"Contains {keywords}",
                               expected=expected_str, actual=actual)
         msg = "Empty" if not body.strip() else f"Missing parts: {missing}"
-        res = StepResult("Description", False, msg,
-                         expected=expected_str, actual=actual)
-        self._email_leader(
-            team,
-            subject=f"[Jira Check] {key} - Description incomplete",
-            body=f"User Story {key} has an incomplete Description.\n{msg}\n",
-            result=res,
-        )
-        return res
+        return StepResult("Description", False, msg,
+                          expected=expected_str, actual=actual)
 
-    def check_issue_links(self, key: str, fields: dict, team: str) -> StepResult:
+    def check_issue_links(self, fields: dict) -> StepResult:
         """'is child task of' target should match the Requirement ID / parent URL."""
         req_id_raw = fields.get(self.field_ids["requirement_id"])
         req_id = str(req_id_raw).strip() if req_id_raw is not None else ""
@@ -440,15 +400,8 @@ class IssueProcessor:
         actual = ", ".join(child_of_keys) if child_of_keys else "<no child-of link>"
 
         if not child_of_keys:
-            res = StepResult("Issue Links", False, "No 'is child task of' link found",
-                             expected=expected_str, actual=actual)
-            self._email_leader(
-                team,
-                subject=f"[Jira Check] {key} - Missing child-of link",
-                body=f"User Story {key} has no 'is child task of' issue link.\n",
-                result=res,
-            )
-            return res
+            return StepResult("Issue Links", False, "No 'is child task of' link found",
+                              expected=expected_str, actual=actual)
 
         # Discrepancy check: child-of target must appear either in parent URL
         # (customfield_10700) or match the Requirement ID value.
@@ -465,15 +418,8 @@ class IssueProcessor:
             f"Child-of={child_of_keys}, RequirementID={req_id!r}, "
             f"ParentKeyFromURL={parent_key_from_url!r}"
         )
-        res = StepResult("Issue Links", False, f"Discrepancy: {msg}",
-                         expected=expected_str, actual=actual)
-        self._email_leader(
-            team,
-            subject=f"[Jira Check] {key} - Issue Link / Requirement ID discrepancy",
-            body=f"User Story {key} has a discrepancy between issue links and Requirement ID.\n{msg}\n",
-            result=res,
-        )
-        return res
+        return StepResult("Issue Links", False, f"Discrepancy: {msg}",
+                          expected=expected_str, actual=actual)
 
     # --- orchestration ------------------------------------------------------
 
@@ -504,20 +450,204 @@ class IssueProcessor:
             self.check_fix_version(issue_key, fields),
             self.check_component(issue_key, fields),
             self.check_labels(issue_key, fields, team),
-            self.check_acceptance_criteria(issue_key, fields, team),
+            self.check_acceptance_criteria(fields),
             self.check_compliance_type(issue_key, fields),
-            self.check_epic_link(issue_key, fields, team),
+            self.check_epic_link(fields),
             self.check_team_name(issue_key, fields),
-            self.check_requirement_id(issue_key, fields, team),
+            self.check_requirement_id(fields),
             self.check_region(issue_key, fields),
             self.check_sector(issue_key, fields),
-            self.check_description(issue_key, fields, team),
-            self.check_issue_links(issue_key, fields, team),
+            self.check_description(fields),
+            self.check_issue_links(fields),
         ]
         result.steps = steps
         result.overall = "PASS" if all(s.passed for s in steps) else "FAIL"
         result.duration_seconds = round(time.perf_counter() - started, 3)
         return result
+
+
+# ---------------------------------------------------------------------------
+# Consolidated leader emails
+# ---------------------------------------------------------------------------
+
+def _recommendation_for(step: StepResult) -> str:
+    """Short, human-friendly remediation text for a failing step."""
+    if step.action.startswith("updated:"):
+        return "Auto-fixed by the script. Please verify the change in Jira."
+    if step.action.startswith("update-failed"):
+        return "Auto-update failed; please apply the change manually."
+    name = step.name
+    if name == "Acceptance Criteria":
+        return "Add the missing parts (Given / When / Then) to the Acceptance Criteria."
+    if name == "Description":
+        return "Add the missing parts (Who / What / Why) to the Description."
+    if name == "Epic Link":
+        return "Set the Epic Link in Jira (Details panel)."
+    if name == "Requirement ID":
+        return "Set the Requirement ID in Jira (Details panel)."
+    if name == "Issue Links":
+        return "Reconcile the 'is child task of' link with the Requirement ID."
+    if name in ("Compliance type", "Team Name", "Region", "Sector"):
+        return f"Verify current value and update to '{step.expected}' if appropriate."
+    if name in ("Affects version", "Fix version", "Component", "Labels"):
+        return "Add the expected value in Jira."
+    return "Review the field manually in Jira."
+
+
+def _html_escape(s: str) -> str:
+    return (str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
+def _build_team_email(team: str, base_url: str,
+                      team_results: list[IssueResult]) -> tuple[str, str, str]:
+    """Build (subject, plain_text, html) for a team's consolidated summary."""
+    rows: list[tuple[str, str, str, str, str]] = []  # key, step, expected, actual, action
+    runtime_errors: list[tuple[str, str]] = []
+    for r in team_results:
+        if r.runtime_error and not r.steps:
+            runtime_errors.append((r.issue_key, r.runtime_error))
+            continue
+        for s in r.steps:
+            if not s.passed:
+                rows.append((
+                    r.issue_key, s.name, s.expected, s.actual, _recommendation_for(s),
+                ))
+
+    issue_count = len({k for k, *_ in rows} | {k for k, _ in runtime_errors})
+    subject = (
+        f"[Jira US Ready Check] {team}: {len(rows)} validation issue(s) "
+        f"across {issue_count} user story/stories"
+    )
+
+    # Plain text
+    text_lines = [
+        f"Hi,",
+        "",
+        f"The Jira ready-check automation found {len(rows)} validation issue(s) "
+        f"in {issue_count} user story/stories for the '{team}' team.",
+        "",
+        f"{'Issue':<14}{'Step':<22}{'Expected':<32}{'Actual':<32}Action",
+        "-" * 130,
+    ]
+    for k, st, exp, act, action in rows:
+        text_lines.append(f"{k:<14}{st:<22}{str(exp)[:30]:<32}{str(act)[:30]:<32}{action}")
+    if runtime_errors:
+        text_lines += ["", "Runtime errors:"]
+        for k, err in runtime_errors:
+            text_lines.append(f"  {k}: {err}")
+    text = "\n".join(text_lines)
+
+    # HTML
+    def _link(key: str) -> str:
+        return f'<a href="{base_url}/browse/{key}">{key}</a>'
+
+    body_rows = "\n".join(
+        f"<tr>"
+        f"<td>{_link(_html_escape(k))}</td>"
+        f"<td>{_html_escape(st)}</td>"
+        f"<td>{_html_escape(exp)}</td>"
+        f"<td>{_html_escape(act)}</td>"
+        f"<td>{_html_escape(action)}</td>"
+        f"</tr>"
+        for k, st, exp, act, action in rows
+    )
+    runtime_block = ""
+    if runtime_errors:
+        rt_rows = "\n".join(
+            f"<tr><td>{_link(_html_escape(k))}</td>"
+            f"<td colspan='4'><i>Runtime error:</i> {_html_escape(err)}</td></tr>"
+            for k, err in runtime_errors
+        )
+        runtime_block = (
+            f"<h3 style='margin-top:24px;'>Runtime errors</h3>"
+            f"<table border='1' cellpadding='6' cellspacing='0' "
+            f"style='border-collapse:collapse;'>{rt_rows}</table>"
+        )
+
+    html = f"""\
+<html>
+  <body style="font-family: Arial, sans-serif; font-size: 13px; color:#222;">
+    <p>Hi,</p>
+    <p>
+      The Jira ready-check automation found
+      <b>{len(rows)}</b> validation issue(s) across
+      <b>{issue_count}</b> user story/stories for the
+      <b>{_html_escape(team)}</b> team. Please review and resolve the items below.
+    </p>
+    <table border="1" cellpadding="6" cellspacing="0"
+           style="border-collapse:collapse; font-size:12px;">
+      <thead style="background-color:#f0f0f0;">
+        <tr>
+          <th>Issue</th>
+          <th>Failing step</th>
+          <th>Expected value</th>
+          <th>Actual value (data missing / wrong)</th>
+          <th>Action to take</th>
+        </tr>
+      </thead>
+      <tbody>
+        {body_rows}
+      </tbody>
+    </table>
+    {runtime_block}
+    <p style="color:#888; font-size:11px;">
+      Automatically generated by jira_checker.py.
+    </p>
+  </body>
+</html>"""
+    return subject, text, html
+
+
+def send_consolidated_emails(mailer: Mailer, base_url: str,
+                             teams_cfg: dict[str, Any],
+                             results: list[IssueResult],
+                             dry_run: bool) -> None:
+    """Group failing/error results by team and send one summary email per team."""
+    by_team: dict[str, list[IssueResult]] = {}
+    for r in results:
+        is_failure = bool(r.runtime_error) or any(not s.passed for s in r.steps)
+        if not is_failure:
+            continue
+        by_team.setdefault(r.team, []).append(r)
+
+    if not by_team:
+        log.info("No failures to report; skipping team summary emails.")
+        return
+
+    for team, team_results in by_team.items():
+        info = teams_cfg.get(team) or {}
+        leader = info.get("leader_email")
+        subject, text, html = _build_team_email(team, base_url, team_results)
+        if not leader:
+            log.warning("No leader_email configured for team '%s'; skipping summary email "
+                        "(%d failing issue(s) not delivered).", team, len(team_results))
+            _annotate_action(team_results, "no-leader-email-configured")
+            continue
+        if dry_run:
+            log.info("[DRY-RUN team email] team=%s leader=%s issues=%d",
+                     team, leader, len(team_results))
+            _annotate_action(team_results, f"team-email-skipped(dry-run):{leader}")
+            continue
+        try:
+            mailer.send(leader, subject, text, html_body=html)
+            log.info("Sent summary email to %s for team '%s' (%d issue(s))",
+                     leader, team, len(team_results))
+            _annotate_action(team_results, f"team-email-sent:{leader}")
+        except Exception as e:  # noqa: BLE001
+            log.error("Failed to send summary email to %s: %s", leader, e)
+            _annotate_action(team_results, f"team-email-failed:{e}")
+
+
+def _annotate_action(team_results: list[IssueResult], suffix: str) -> None:
+    """Append the team-email outcome to each failing step's action column."""
+    for r in team_results:
+        for s in r.steps:
+            if not s.passed:
+                s.action = f"{s.action}; {suffix}" if s.action else suffix
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +784,14 @@ def main(argv: list[str] | None = None) -> int:
         log.info("  -> %s in %.2fs (failing=%s)",
                  res.overall, res.duration_seconds, res.failing_step_names())
         results.append(res)
+
+    send_consolidated_emails(
+        mailer=mailer,
+        base_url=config["jira"]["base_url"],
+        teams_cfg=config["teams"],
+        results=results,
+        dry_run=not send_emails,
+    )
 
     if args.output:
         out = Path(args.output)
