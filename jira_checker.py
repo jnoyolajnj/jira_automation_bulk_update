@@ -179,6 +179,23 @@ def check_contains_named(item_list: list[dict] | None, expected_name: str) -> bo
     return expected_name in _list_values(item_list or [], "name")
 
 
+def _extract_parent_issue_key(fields: dict) -> str:
+    """Resolve the parent / Requirement ID issue key from an issue's fields.
+
+    Prefer the URL stored in customfield_10700; fall back to the
+    'is child task of' issue link.
+    """
+    parent_url = fields.get("customfield_10700") or ""
+    m = re.search(r"/browse/([A-Z]+-\d+)", parent_url)
+    if m:
+        return m.group(1)
+    for link in fields.get("issuelinks") or []:
+        link_type = (link.get("type") or {}).get("inward", "")
+        if link_type.lower() == "is child task of" and link.get("inwardIssue"):
+            return link["inwardIssue"]["key"]
+    return ""
+
+
 class IssueProcessor:
     def __init__(self, jira: JiraClient, mailer: Mailer, config: dict[str, Any],
                  auto_update: bool = True, send_emails: bool = True,
@@ -194,6 +211,9 @@ class IssueProcessor:
         self.raw_response_dir = raw_response_dir
         if raw_response_dir is not None:
             raw_response_dir.mkdir(parents=True, exist_ok=True)
+        # Cache for parent (ReqID) issues fetched during cross-issue checks,
+        # so the same parent isn't re-fetched once per child.
+        self._parent_cache: dict[str, dict[str, Any]] = {}
 
     # --- helpers -----------------------------------------------------------
 
@@ -310,11 +330,63 @@ class IssueProcessor:
                           expected=expected_str, actual=actual)
 
     def check_compliance_type(self, key: str, fields: dict) -> StepResult:
-        return self._check_single_option_field(
-            key, fields, "Compliance type",
-            self.field_ids["compliance_type"],
-            self.expected["compliance_type"],
+        """Compare this story's Compliance Type against its parent ReqID's value.
+
+        empty                  -> FAIL ("Compliance Type is not filled")
+        equals parent's value  -> PASS ("Matches with ReqID")
+        differs from parent    -> FAIL ("Mismatch value with ReqID")
+        """
+        del key  # the parent ReqID is the only key relevant for this check
+        field_id = self.field_ids["compliance_type"]
+        v = fields.get(field_id)
+        actual = _option_value(v)
+
+        if not _has_value(v):
+            return StepResult(
+                "Compliance type", False, "Compliance Type is not filled",
+                expected="<filled, matching ReqID>", actual=actual,
+            )
+
+        parent_key = _extract_parent_issue_key(fields)
+        if not parent_key:
+            return StepResult(
+                "Compliance type", False,
+                "Cannot determine ReqID to compare with",
+                expected="<ReqID compliance type>", actual=actual,
+            )
+
+        try:
+            parent_issue = self._get_parent_issue(parent_key)
+        except Exception as e:  # noqa: BLE001
+            return StepResult(
+                "Compliance type", False,
+                f"Failed to fetch ReqID {parent_key}: {e}",
+                expected=f"<compliance type from {parent_key}>",
+                actual=actual, error=str(e),
+            )
+
+        parent_compliance = _option_value(
+            parent_issue.get("fields", {}).get(field_id)
         )
+        expected_str = f"{parent_compliance} (from {parent_key})"
+
+        if actual == parent_compliance:
+            return StepResult(
+                "Compliance type", True, "Matches with ReqID",
+                expected=expected_str, actual=actual,
+            )
+        return StepResult(
+            "Compliance type", False, "Mismatch value with ReqID",
+            expected=expected_str, actual=actual,
+        )
+
+    def _get_parent_issue(self, parent_key: str) -> dict[str, Any]:
+        cached = self._parent_cache.get(parent_key)
+        if cached is not None:
+            return cached
+        issue = self.jira.get_issue(parent_key)
+        self._parent_cache[parent_key] = issue
+        return issue
 
     def check_epic_link(self, fields: dict) -> StepResult:
         field_id = self.field_ids["epic_link"]
@@ -376,12 +448,9 @@ class IssueProcessor:
         """'is child task of' target should match the Requirement ID / parent URL."""
         req_id_raw = fields.get(self.field_ids["requirement_id"])
         req_id = str(req_id_raw).strip() if req_id_raw is not None else ""
-
-        parent_url = fields.get("customfield_10700") or ""
-        parent_key_from_url = ""
-        m = re.search(r"/browse/([A-Z]+-\d+)", parent_url)
-        if m:
-            parent_key_from_url = m.group(1)
+        parent_key_from_url = _extract_parent_issue_key(
+            {"customfield_10700": fields.get("customfield_10700"), "issuelinks": []}
+        )
 
         child_of_keys: list[str] = []
         for link in fields.get("issuelinks") or []:
@@ -483,7 +552,17 @@ def _recommendation_for(step: StepResult) -> str:
         return "Set the Requirement ID in Jira (Details panel)."
     if name == "Issue Links":
         return "Reconcile the 'is child task of' link with the Requirement ID."
-    if name in ("Compliance type", "Team Name", "Region", "Sector"):
+    if name == "Compliance type":
+        msg = step.message.lower()
+        if "not filled" in msg:
+            return "Set the Compliance Type in Jira to match the Requirement ID's value."
+        if "mismatch" in msg:
+            return ("Compliance Type does not match the Requirement ID. Align the user "
+                    "story's Compliance Type with the ReqID, or correct the ReqID.")
+        if "cannot determine reqid" in msg:
+            return "Set a Requirement ID / parent link so Compliance Type can be compared."
+        return "Review the Compliance Type field manually."
+    if name in ("Team Name", "Region", "Sector"):
         return f"Verify current value and update to '{step.expected}' if appropriate."
     if name in ("Affects version", "Fix version", "Component", "Labels"):
         return "Add the expected value in Jira."
