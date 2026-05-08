@@ -5,7 +5,7 @@
         "timeout_seconds": 30
     },
     "smtp": {
-        "host": "smtp.example.com",
+        "host": "smtp.office365.com",
         "port": 587,
         "use_tls": true,
         "username": "",
@@ -17,7 +17,7 @@
         "compliance_type": "customfield_10503",
         "epic_link": "customfield_10006",
         "team_name": "customfield_10706",
-        "requirement_id": "customfield_10702",
+        "requirement_id": "customfield_10700",
         "region": "customfield_10900",
         "sector": "customfield_10901"
     },
@@ -40,9 +40,21 @@
             "label": "DEL",
             "leader_email": "leader.delivery@its.jnj.com"
         },
+        "Distribution": {
+            "label": "DIS",
+            "leader_email": "leader.distribution@its.jnj.com"
+        },
         "Loaner": {
             "label": "LOA",
             "leader_email": "leader.loaner@its.jnj.com"
+        },
+        "EDI": {
+            "label": "EDI",
+            "leader_email": "leader.edi@its.jnj.com"
+        },
+        "Planning": {
+            "label": "PLA",
+            "leader_email": "leader.planning@its.jnj.com"
         }
     },
     "acceptance_criteria_keywords": ["Given", "When", "Then"],
