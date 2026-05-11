@@ -84,7 +84,9 @@ def load_config(path: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 class JiraClient:
-    def __init__(self, base_url: str, bearer_token: str, verify_ssl: bool = True, timeout: int = 30):
+    def __init__(self, base_url: str, bearer_token: str, verify_ssl: bool = True,
+                 timeout: int = 30, request_delay_seconds: float = 0.0,
+                 max_retries_on_429: int = 3):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers.update({
@@ -94,17 +96,41 @@ class JiraClient:
         })
         self.session.verify = verify_ssl
         self.timeout = timeout
+        self._request_delay = float(request_delay_seconds)
+        self._max_retries_429 = int(max_retries_on_429)
+        self._last_request_at: float = 0.0
+
+    def _throttle(self) -> None:
+        if self._request_delay <= 0 or self._last_request_at == 0.0:
+            return
+        elapsed = time.perf_counter() - self._last_request_at
+        if elapsed < self._request_delay:
+            time.sleep(self._request_delay - elapsed)
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+        """Issue an HTTP request with throttle + automatic 429 retry."""
+        attempts = self._max_retries_429 + 1
+        for attempt in range(1, attempts + 1):
+            self._throttle()
+            r = self.session.request(method, url, timeout=self.timeout, **kwargs)
+            self._last_request_at = time.perf_counter()
+            if r.status_code != 429:
+                return r
+            wait = float(r.headers.get("Retry-After", str(min(60, 2 ** attempt))))
+            log.warning("Rate limited (HTTP 429) on %s %s. Sleeping %.1fs "
+                        "(attempt %d/%d).", method, url, wait, attempt, attempts)
+            time.sleep(wait)
+        return r  # last response, still 429
 
     def get_issue(self, key: str) -> dict[str, Any]:
         url = f"{self.base_url}/rest/api/2/issue/{key}"
-        r = self.session.get(url, timeout=self.timeout)
+        r = self._request("GET", url)
         r.raise_for_status()
         return r.json()
 
     def update_issue(self, key: str, fields: dict[str, Any]) -> None:
         url = f"{self.base_url}/rest/api/2/issue/{key}"
-        payload = {"fields": fields}
-        r = self.session.put(url, json=payload, timeout=self.timeout)
+        r = self._request("PUT", url, json={"fields": fields})
         if r.status_code >= 400:
             raise RuntimeError(f"Jira update failed ({r.status_code}): {r.text}")
 
@@ -177,6 +203,32 @@ def _option_value(v: Any) -> str:
 
 def check_contains_named(item_list: list[dict] | None, expected_name: str) -> bool:
     return expected_name in _list_values(item_list or [], "name")
+
+
+_run_dir_for_process: Path | None = None
+
+
+def _allocate_run_dir(reports_dir: Path) -> Path:
+    """Return the run folder for this Python process.
+
+    Memoised in a module-level variable: a second call inside the same
+    process — for whatever reason — reuses the existing folder instead of
+    creating a new timestamped one. If two folders ever appear for what
+    you believe is a single execution, you have launched the script
+    twice (the 'Run started' log lines below will show two distinct PIDs).
+    """
+    global _run_dir_for_process
+    if _run_dir_for_process is not None:
+        return _run_dir_for_process
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = reports_dir / f"run_{ts}"
+    # Collision (same-second second invocation in another process) — append PID.
+    if run_dir.exists():
+        run_dir = reports_dir / f"run_{ts}_pid{os.getpid()}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _run_dir_for_process = run_dir
+    return run_dir
 
 
 def _extract_parent_issue_key(fields: dict) -> str:
@@ -594,7 +646,7 @@ def _build_team_email(team: str, base_url: str,
 
     issue_count = len({k for k, *_ in rows} | {k for k, _ in runtime_errors})
     subject = (
-        f"[Jira US Ready Check] {team}: {len(rows)} validation issue(s) "
+        f"[Jira US Ready Check] Stream {team}: {len(rows)} validation issue(s) "
         f"across {issue_count} user story/stories"
     )
 
@@ -603,9 +655,9 @@ def _build_team_email(team: str, base_url: str,
         f"Hi,",
         "",
         f"The Jira ready-check automation found {len(rows)} validation issue(s) "
-        f"in {issue_count} user story/stories for the '{team}' team.",
+        f"in {issue_count} user story/stories for the '{team}' stream.",
         "",
-        f"{'Issue':<14}{'Step':<22}{'Expected':<32}{'Actual':<32}Action",
+        f"{'User Story':<14}{'Step':<22}{'Expected':<32}{'Actual':<32}Action",
         "-" * 130,
     ]
     for k, st, exp, act, action in rows:
@@ -651,13 +703,13 @@ def _build_team_email(team: str, base_url: str,
       The Jira ready-check automation found
       <b>{len(rows)}</b> validation issue(s) across
       <b>{issue_count}</b> user story/stories for the
-      <b>{_html_escape(team)}</b> team. Please review and resolve the items below.
+      <b>{_html_escape(team)}</b> stream. Please review and resolve the items below.
     </p>
     <table border="1" cellpadding="6" cellspacing="0"
            style="border-collapse:collapse; font-size:12px;">
       <thead style="background-color:#f0f0f0;">
         <tr>
-          <th>Issue</th>
+          <th>User Story</th>
           <th>Failing step</th>
           <th>Expected value</th>
           <th>Actual value (data missing / wrong)</th>
@@ -681,7 +733,7 @@ def send_consolidated_emails(mailer: Mailer, base_url: str,
                              teams_cfg: dict[str, Any],
                              results: list[IssueResult],
                              dry_run: bool) -> None:
-    """Group failing/error results by team and send one summary email per team."""
+    """Group failing/error results by stream and send one summary email per stream."""
     by_team: dict[str, list[IssueResult]] = {}
     for r in results:
         is_failure = bool(r.runtime_error) or any(not s.passed for s in r.steps)
@@ -690,7 +742,7 @@ def send_consolidated_emails(mailer: Mailer, base_url: str,
         by_team.setdefault(r.team, []).append(r)
 
     if not by_team:
-        log.info("No failures to report; skipping team summary emails.")
+        log.info("No failures to report; skipping stream summary emails.")
         return
 
     for team, team_results in by_team.items():
@@ -698,23 +750,23 @@ def send_consolidated_emails(mailer: Mailer, base_url: str,
         leader = info.get("leader_email")
         subject, text, html = _build_team_email(team, base_url, team_results)
         if not leader:
-            log.warning("No leader_email configured for team '%s'; skipping summary email "
+            log.warning("No leader_email configured for stream '%s'; skipping summary email "
                         "(%d failing issue(s) not delivered).", team, len(team_results))
             _annotate_action(team_results, "no-leader-email-configured")
             continue
         if dry_run:
-            log.info("[DRY-RUN team email] team=%s leader=%s issues=%d",
+            log.info("[DRY-RUN stream email] stream=%s leader=%s issues=%d",
                      team, leader, len(team_results))
-            _annotate_action(team_results, f"team-email-skipped(dry-run):{leader}")
+            _annotate_action(team_results, f"stream-email-skipped(dry-run):{leader}")
             continue
         try:
             mailer.send(leader, subject, text, html_body=html)
-            log.info("Sent summary email to %s for team '%s' (%d issue(s))",
+            log.info("Sent summary email to %s for stream '%s' (%d issue(s))",
                      leader, team, len(team_results))
-            _annotate_action(team_results, f"team-email-sent:{leader}")
+            _annotate_action(team_results, f"stream-email-sent:{leader}")
         except Exception as e:  # noqa: BLE001
             log.error("Failed to send summary email to %s: %s", leader, e)
-            _annotate_action(team_results, f"team-email-failed:{e}")
+            _annotate_action(team_results, f"stream-email-failed:{e}")
 
 
 def _annotate_action(team_results: list[IssueResult], suffix: str) -> None:
@@ -729,20 +781,27 @@ def _annotate_action(team_results: list[IssueResult], suffix: str) -> None:
 # Excel I/O
 # ---------------------------------------------------------------------------
 
+_USER_STORY_HEADERS = {"user story", "userstory", "issuekey", "issue key", "key"}
+_STREAM_HEADERS = {"stream", "team"}
+
+
 def read_input(path: Path) -> list[tuple[str, str]]:
-    """Return a list of (issue_key, team). Team is the sheet name unless a
-    'Team' column overrides it."""
+    """Return a list of (user_story_key, stream).
+
+    The Excel sheet name is used as the stream unless a 'Stream' column
+    overrides it per row. Old 'IssueKey' / 'Team' headers are still accepted.
+    """
     wb = load_workbook(path, read_only=True, data_only=True)
     rows: list[tuple[str, str]] = []
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
         header = [str(c.value).strip() if c.value is not None else "" for c in next(ws.iter_rows(max_row=1))]
         try:
-            key_idx = next(i for i, h in enumerate(header) if h.lower() in ("issuekey", "issue key", "key"))
+            key_idx = next(i for i, h in enumerate(header) if h.lower() in _USER_STORY_HEADERS)
         except StopIteration:
-            log.warning("Sheet %r has no IssueKey column; skipping", sheet_name)
+            log.warning("Sheet %r has no 'User Story' column; skipping", sheet_name)
             continue
-        team_idx = next((i for i, h in enumerate(header) if h.lower() == "team"), None)
+        stream_idx = next((i for i, h in enumerate(header) if h.lower() in _STREAM_HEADERS), None)
 
         for row in ws.iter_rows(min_row=2, values_only=True):
             if not row or row[key_idx] is None:
@@ -750,10 +809,10 @@ def read_input(path: Path) -> list[tuple[str, str]]:
             key = str(row[key_idx]).strip()
             if not key:
                 continue
-            team = sheet_name
-            if team_idx is not None and row[team_idx]:
-                team = str(row[team_idx]).strip()
-            rows.append((key, team))
+            stream = sheet_name
+            if stream_idx is not None and row[stream_idx]:
+                stream = str(row[stream_idx]).strip()
+            rows.append((key, stream))
     return rows
 
 
@@ -762,7 +821,7 @@ def write_report(results: list[IssueResult], output_path: Path) -> None:
     summary = wb.active
     summary.title = "Summary"
     summary.append([
-        "Issue Key", "Team", "Overall", "Duration (s)", "Failing Steps",
+        "User Story", "Stream", "Overall", "Duration (s)", "Failing Steps",
         "Runtime Error",
     ])
     for r in results:
@@ -777,7 +836,7 @@ def write_report(results: list[IssueResult], output_path: Path) -> None:
 
     details = wb.create_sheet("Details")
     details.append([
-        "Issue Key", "Team", "Step", "Passed", "Expected Value", "Actual Value",
+        "User Story", "Stream", "Step", "Passed", "Expected Value", "Actual Value",
         "Message", "Action", "Error",
     ])
     for r in results:
@@ -830,14 +889,14 @@ def main(argv: list[str] | None = None) -> int:
         bearer_token=token,
         verify_ssl=config["jira"].get("verify_ssl", True),
         timeout=config["jira"].get("timeout_seconds", 30),
+        request_delay_seconds=config["jira"].get("request_delay_seconds", 0.0),
+        max_retries_on_429=config["jira"].get("max_retries_on_429", 3),
     )
     mailer = Mailer(config["smtp"], dry_run=not send_emails)
 
     reports_dir = Path("reports")
-    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = reports_dir / f"run_{run_ts}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    log.info("Run folder: %s", run_dir)
+    run_dir = _allocate_run_dir(reports_dir)
+    log.info("=== Run started: PID=%d run_dir=%s ===", os.getpid(), run_dir)
     processor = IssueProcessor(
         jira, mailer, config,
         auto_update=auto_update, send_emails=send_emails,
@@ -880,6 +939,7 @@ def main(argv: list[str] | None = None) -> int:
 
     fails = sum(1 for r in results if r.overall != "PASS")
     log.info("Done. %d PASS, %d FAIL", len(results) - fails, fails)
+    log.info("=== Run completed: PID=%d run_dir=%s ===", os.getpid(), run_dir)
     return 0 if fails == 0 else 1
 
 

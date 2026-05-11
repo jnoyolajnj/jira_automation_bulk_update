@@ -2,17 +2,16 @@
 from openpyxl import Workbook
 
 wb = Workbook()
+HEADER = ["User Story", "Stream"]
 
 ws_fin = wb.active
 ws_fin.title = "Finance"
-ws_fin.append(["IssueKey", "Team"])
+ws_fin.append(HEADER)
 ws_fin.append(["AASQ-72454", "Finance"])
 
-ws_del = wb.create_sheet("Delivery")
-ws_del.append(["IssueKey", "Team"])
-
-ws_loa = wb.create_sheet("Loaner")
-ws_loa.append(["IssueKey", "Team"])
+for sheet_name in ("Delivery", "Distribution", "Loaner", "EDI", "Planning"):
+    ws = wb.create_sheet(sheet_name)
+    ws.append(HEADER)
 
 wb.save("input_user_stories.xlsx")
 print("Created input_user_stories.xlsx")
