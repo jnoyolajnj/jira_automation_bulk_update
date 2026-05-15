@@ -250,8 +250,7 @@ def _extract_parent_issue_key(fields: dict) -> str:
 
 class IssueProcessor:
     def __init__(self, jira: JiraClient, mailer: Mailer, config: dict[str, Any],
-                 auto_update: bool = True, send_emails: bool = True,
-                 raw_response_dir: Path | None = None):
+                 auto_update: bool = True, send_emails: bool = True):
         self.jira = jira
         self.mailer = mailer
         self.cfg = config
@@ -260,9 +259,6 @@ class IssueProcessor:
         self.field_ids = config["field_ids"]
         self.expected = config["expected_values"]
         self.teams = config["teams"]
-        self.raw_response_dir = raw_response_dir
-        if raw_response_dir is not None:
-            raw_response_dir.mkdir(parents=True, exist_ok=True)
         # Cache for parent (ReqID) issues fetched during cross-issue checks,
         # so the same parent isn't re-fetched once per child.
         self._parent_cache: dict[str, dict[str, Any]] = {}
@@ -385,25 +381,21 @@ class IssueProcessor:
         """Compare this story's Compliance Type against its parent ReqID's value.
 
         empty                  -> FAIL ("Compliance Type is not filled")
+                                  + auto-fill with the ReqID's value
         equals parent's value  -> PASS ("Matches with ReqID")
         differs from parent    -> FAIL ("Mismatch value with ReqID")
+                                  + auto-overwrite with the ReqID's value
         """
-        del key  # the parent ReqID is the only key relevant for this check
         field_id = self.field_ids["compliance_type"]
         v = fields.get(field_id)
         actual = _option_value(v)
 
-        if not _has_value(v):
-            return StepResult(
-                "Compliance type", False, "Compliance Type is not filled",
-                expected="<filled, matching ReqID>", actual=actual,
-            )
-
         parent_key = _extract_parent_issue_key(fields)
         if not parent_key:
+            msg = ("Compliance Type is not filled" if not _has_value(v)
+                   else "Cannot determine ReqID to compare with")
             return StepResult(
-                "Compliance type", False,
-                "Cannot determine ReqID to compare with",
+                "Compliance type", False, msg,
                 expected="<ReqID compliance type>", actual=actual,
             )
 
@@ -417,20 +409,28 @@ class IssueProcessor:
                 actual=actual, error=str(e),
             )
 
-        parent_compliance = _option_value(
-            parent_issue.get("fields", {}).get(field_id)
-        )
+        parent_raw = parent_issue.get("fields", {}).get(field_id)
+        parent_compliance = _option_value(parent_raw)
         expected_str = f"{parent_compliance} (from {parent_key})"
 
-        if actual == parent_compliance:
+        if _has_value(v) and actual == parent_compliance:
             return StepResult(
                 "Compliance type", True, "Matches with ReqID",
                 expected=expected_str, actual=actual,
             )
-        return StepResult(
-            "Compliance type", False, "Mismatch value with ReqID",
+
+        msg = ("Compliance Type is not filled" if not _has_value(v)
+               else "Mismatch value with ReqID")
+        res = StepResult(
+            "Compliance type", False, msg,
             expected=expected_str, actual=actual,
         )
+        # Auto-fill / overwrite with the ReqID's value (when it has one).
+        if _has_value(parent_raw):
+            self._update(key, {field_id: [{"value": parent_compliance}]}, res)
+        else:
+            res.action = f"no-update: ReqID {parent_key} has no Compliance Type"
+        return res
 
     def _get_parent_issue(self, parent_key: str) -> dict[str, Any]:
         cached = self._parent_cache.get(parent_key)
@@ -551,14 +551,6 @@ class IssueProcessor:
             result.overall = "FAIL"
             result.duration_seconds = round(time.perf_counter() - started, 3)
             return result
-
-        if self.raw_response_dir is not None:
-            try:
-                out_path = self.raw_response_dir / f"{issue_key}.json"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump(issue, f, indent=2, ensure_ascii=False)
-            except Exception as e:  # noqa: BLE001
-                log.warning("Failed to save raw response for %s: %s", issue_key, e)
 
         fields = issue.get("fields", {})
 
@@ -900,7 +892,6 @@ def main(argv: list[str] | None = None) -> int:
     processor = IssueProcessor(
         jira, mailer, config,
         auto_update=auto_update, send_emails=send_emails,
-        raw_response_dir=run_dir,
     )
 
     stories = read_input(input_path)
@@ -935,7 +926,6 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     write_report(results, out)
     log.info("Report written: %s", out)
-    log.info("Raw API responses saved alongside report in: %s", run_dir)
 
     fails = sum(1 for r in results if r.overall != "PASS")
     log.info("Done. %d PASS, %d FAIL", len(results) - fails, fails)
