@@ -60,14 +60,29 @@ class StepResult:
 @dataclass
 class IssueResult:
     issue_key: str
-    team: str
-    overall: str = "PASS"                 # PASS or FAIL
+    team: str                                # Stream (sheet name in the input)
+    assignee: str = ""
+    overall: str = "PASS"                    # PASS or FAIL
     duration_seconds: float = 0.0
     runtime_error: str = ""
     steps: list[StepResult] = field(default_factory=list)
 
     def failing_step_names(self) -> list[str]:
         return [s.name for s in self.steps if not s.passed]
+
+    def fixed_step_names(self) -> list[str]:
+        """Steps the script auto-overwrote (action begins with 'updated:')."""
+        return [
+            s.name for s in self.steps
+            if not s.passed and s.action.startswith("updated:")
+        ]
+
+    def unfixed_failing_step_names(self) -> list[str]:
+        """Failing steps the script could not fix; the leader must complete them."""
+        return [
+            s.name for s in self.steps
+            if not s.passed and not s.action.startswith("updated:")
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -553,6 +568,10 @@ class IssueProcessor:
             return result
 
         fields = issue.get("fields", {})
+        assignee = fields.get("assignee") or {}
+        result.assignee = (assignee.get("displayName")
+                           or assignee.get("name")
+                           or "Unassigned")
 
         steps = [
             self.check_affects_version(issue_key, fields),
@@ -813,17 +832,25 @@ def write_report(results: list[IssueResult], output_path: Path) -> None:
     summary = wb.active
     summary.title = "Summary"
     summary.append([
-        "User Story", "Stream", "Overall", "Duration (s)", "Failing Steps",
-        "Runtime Error",
+        "User Story", "Stream", "Assignee", "Overall",
+        "Fixed Steps", "Failing Steps", "Duration", "Status",
     ])
     for r in results:
+        # When the issue couldn't even be fetched, surface that in the
+        # Failing Steps column so it isn't only visible in Details.
+        if r.runtime_error and not r.steps:
+            failing_cell = f"RUNTIME ERROR: {r.runtime_error}"
+        else:
+            failing_cell = "; ".join(r.unfixed_failing_step_names())
         summary.append([
             r.issue_key,
             r.team,
+            r.assignee,
             r.overall,
+            "; ".join(r.fixed_step_names()),
+            failing_cell,
             r.duration_seconds,
-            "; ".join(r.failing_step_names()),
-            r.runtime_error,
+            "",  # Status — intentionally blank for the leader to fill in
         ])
 
     details = wb.create_sheet("Details")
