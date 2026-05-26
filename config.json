@@ -28,7 +28,6 @@
         "fix_version": "Osprey_2026",
         "component": "JDE",
         "base_label": "Osprey",
-        "compliance_type": "GxP",
         "team_name": "EMEA_GMED_JDE8.12_JEDIKNIGHTS",
         "region": "EMEA",
         "sector": "MedTech"
