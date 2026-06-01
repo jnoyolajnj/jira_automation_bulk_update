@@ -520,10 +520,20 @@ class IssueProcessor:
         )
 
         child_of_keys: list[str] = []
+        other_link_labels: list[str] = []   # link types other than 'is child task of'
         for link in fields.get("issuelinks") or []:
-            link_type = (link.get("type") or {}).get("inward", "")
-            if link_type.lower() == "is child task of" and link.get("inwardIssue"):
+            link_type = link.get("type") or {}
+            inward = link_type.get("inward", "")
+            outward = link_type.get("outward", "")
+            if inward.lower() == "is child task of" and link.get("inwardIssue"):
                 child_of_keys.append(link["inwardIssue"]["key"])
+            else:
+                # Pick the label that describes this link from THIS issue's
+                # perspective (inward when this issue is the target, outward
+                # when it is the source).
+                label = inward if link.get("inwardIssue") else outward
+                if label:
+                    other_link_labels.append(label)
 
         expected_str = (
             f"'is child task of' target == RequirementID/Parent "
@@ -532,7 +542,19 @@ class IssueProcessor:
         actual = ", ".join(child_of_keys) if child_of_keys else "<no child-of link>"
 
         if not child_of_keys:
-            return StepResult("Issue Links", False, "No 'is child task of' link found",
+            # Preserve first occurrence order, dedupe.
+            seen: list[str] = []
+            for lbl in other_link_labels:
+                if lbl not in seen:
+                    seen.append(lbl)
+            if seen:
+                found = ", ".join(f"'{lbl}'" for lbl in seen)
+                msg = f"'is child task of' not found, found {found}"
+                actual = ", ".join(seen)
+            else:
+                msg = "'is child task of' not found, no other issue links present"
+                actual = "<no links>"
+            return StepResult("Issue Links", False, msg,
                               expected=expected_str, actual=actual)
 
         # Discrepancy check: child-of target must appear either in parent URL
