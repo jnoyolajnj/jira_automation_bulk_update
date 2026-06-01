@@ -249,17 +249,20 @@ def _allocate_run_dir(reports_dir: Path) -> Path:
 def _extract_parent_issue_key(fields: dict) -> str:
     """Resolve the parent / Requirement ID issue key from an issue's fields.
 
-    Prefer the URL stored in customfield_10700; fall back to the
-    'is child task of' issue link.
+    Priority:
+      1. 'is child task of' issue link.
+      2. Requirement ID field (customfield_10700) — accepts a full URL,
+         a relative /browse/ path, or just the bare key (e.g. 'AASQ-20670').
     """
-    parent_url = fields.get("customfield_10700") or ""
-    m = re.search(r"/browse/([A-Z]+-\d+)", parent_url)
-    if m:
-        return m.group(1)
     for link in fields.get("issuelinks") or []:
         link_type = (link.get("type") or {}).get("inward", "")
         if link_type.lower() == "is child task of" and link.get("inwardIssue"):
             return link["inwardIssue"]["key"]
+    raw = fields.get("customfield_10700")
+    if raw:
+        m = re.search(r"\b([A-Z][A-Z0-9]+-\d+)\b", str(raw))
+        if m:
+            return m.group(1)
     return ""
 
 
